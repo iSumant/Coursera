@@ -1,6 +1,13 @@
-### Coursera: Regression Models - Project
-#### Motor Trend Car Road Tests
-#### Sumant Sharma
+
+---
+output: html_document
+---
+---
+title: "Coursera: Regression Models - Project"
+subtitle: "Motor Trend Car Road Tests"
+author: "Sumant Sharma"
+
+---  
 
 ***
 
@@ -46,7 +53,7 @@ p + geom_boxplot(aes(fill=am))
 </code>
 
 #### 4. Data Modeling   
-Let’s investigate the relationship between miles per gallon and transmission type. First we run a regression model with <code>mpg</code> as the response variable and <code>am</code> as the (only) explanatory variable.   
+Let's investigate the relationship between miles per gallon and transmission type. First we run a regression model with <code>mpg</code> as the response variable and <code>am</code> as the (only) explanatory variable.   
 ```{r, results='hide'}
 mod1<-lm(mpg ~ am, data = mtcars)
 summary(mod1)$coef
