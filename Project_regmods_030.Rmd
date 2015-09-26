@@ -1,7 +1,6 @@
 ### Coursera: Regression Models - Project
 #### Motor Trend Car Road Tests
 #### Sumant Sharma
-```
 
 ***
 
