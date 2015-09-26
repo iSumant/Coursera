@@ -1,0 +1,183 @@
+---
+output: html_document
+---
+---
+title: "Coursera: Regression Models - Project"
+subtitle: "Motor Trend Car Road Tests"
+author: "Sumant Sharma"
+
+---  
+
+***
+
+### Executive Summary
+
+In this project we work for Motor Trend, a magazine about the automobile industry. Looking at a data set of a collection of cars, we explor the relationship between a set of variables and miles per gallon (MPG) (outcome). We are particularly interested in the following two questions:
+
+* Is an automatic or manual transmission better for <code>MPG</code>?
+* Quantify the <code>MPG</code> difference between 'automatic' and 'manual' transmissions.
+
+***
+### Solution   
+#### 1. Data Dictionary   
+This dataset was extracted from the 1974 Motor Trend US magazine which comprises of 11 aspects of automobile design and performance for 32 automobiles. Refer Table 1(Appendix - A) for the dataset.
+```{r, results='hide'}
+data(mtcars)
+head(mtcars)
+```   
+
+
+#### 2. Data Transformation   
+The first step to build any data model is to cleanse the data. As part of data cleansing, we transformed and factored the following categorical variables.   
+
+```{r, echo=TRUE}
+data(mtcars)
+mtcars$cyl <- factor(mtcars$cyl)
+mtcars$vs <- factor(mtcars$vs)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+mtcars$am <- factor(mtcars$am,labels=c('Automatic','Manual'))
+```   
+
+#### 3. Data Exploration   
+Once data transformation was complete, we used multiple data exploration tools such as scatterplots, histograms etc. to identifying meaningful relationships among variables.   
+   
+<code>scatterPlotMatrix(mtcars)</code>   
+   
+From the Plot 1(Appendix - B) we notice that variables like <code>cyl</code>, <code>disp</code>, <code>hp</code>, <code>drat</code>, <code>wt</code>, <code>vs</code> and <code>am</code> seem to have some strong correlation with <code>mpg</code>. We also plot a boxplot of the variable <code>mpg</code> grouped by <code>am</code>. Plot 2(Appendix - B) shows that the mpg is higher when the transmission is 'Manual'.   
+   
+<code>library(ggplot2)  
+p <- ggplot(mtcars, aes(am, mpg))  
+p + geom_boxplot(aes(fill=am))  
+</code>
+
+#### 4. Data Modeling   
+Let’s investigate the relationship between miles per gallon and transmission type. First we run a regression model with <code>mpg</code> as the response variable and <code>am</code> as the (only) explanatory variable.   
+```{r, results='hide'}
+mod1<-lm(mpg ~ am, data = mtcars)
+summary(mod1)$coef
+```   
+Table 2(Appendix - A) shows that the model explains only 35% of the total variation in <code>mpg</code> and there are additional variables in our data; there is a chance that we could find a better model. So we run the regression model multiple times using STEP method to build multiple regression models using both forward selection and backward elimination methods by the AIC algorithm.   
+```{r, results='hide'}
+mod2<-lm(mpg ~ ., data = mtcars)
+mod3<-step(mod2, direction = "both")
+summary(mod3)
+```   
+We can see in Table 3(Appendix - A) the adjusted R^2^ value is equal to 0.84, thus this model can explain 84% of the variability with <code>cyl</code>, <code>wt</code>, <code>hp</code> and <code>am</code> as relevant variables.   
+We further compare the models with <code>ANOVA</code>. Based on the significant p-values of model coefficients, the model <code>(mpg ~ cyl + hp + wt + am)</code> is our final selection - refer Table 4(Appendix - A).
+
+```{r, results='hide'}
+anova(mod1, mod3)
+```
+
+#### 5. Residuals
+<code>par(mfrow = c(2,2))
+plot(mod3)
+</code> 
+Plot 3(Appendix - B) depicts that the residual plots are  randomly scattered.   
+
+#### 6. Conclusion
+From the <code>mod3 (mpg ~ cyl + hp + wt + am)</code> model we can conclude that 'Manual' transmission is better than 'Automatic' transmission for <code>mpg</code>. Miles per gallon <code>mpg</code> will increase by 1.81 in cars with 'Manual' transmission in comparison to cars with 'Automatic' transmission (adjusted by <code>cyl, hp & wt</code>).   
+
+***
+#### Appendix - A
+```{r loading, cache=TRUE, echo=FALSE, fig.width=6}
+data(mtcars)
+head(mtcars)
+```   
+
+Table 1: mtcars dataset
+
+```{r, echo=FALSE, fig.width=6}
+mod1<-lm(mpg ~ am, data = mtcars)
+summary(mod1)
+```   
+
+Table 2: Summary of the model with <code>mpg</code> as the response variable with <code>am</code> as predictor.
+
+```{r, echo=FALSE, fig.width=6}
+mod2<-lm(mpg ~ cyl + hp + wt + am, data = mtcars)
+summary(mod2)
+```   
+
+Table 3: Summary of the model with <code>mpg</code> as the response variable by <code>step</code> method.
+
+```{r, echo=FALSE, fig.width=6}
+anova(mod1, mod3)
+```
+
+Table 4: Analysis of variance between <code>mod1</code> and <code>mod3</code>   
+
+***
+
+#### Appendix - B
+
+```{r, echo=FALSE, fig.height=10, fig.width=10}
+panel.cor.scale <- function(x, y, digits=2, prefix="", cex.cor)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r = (cor(x, y,use="pairwise"))
+  txt <- format(c(r, 0.123456789), digits=digits)[1]
+	txt <- paste(prefix, txt, sep="")
+	if(missing(cex.cor)) cex <- 0.5/strwidth(txt)
+	text(0.5, 0.5, txt, cex = 2 * abs(r))
+}
+
+
+panel.cor <- function(x, y, digits=2, prefix="", cex.cor)
+{
+	usr <- par("usr"); on.exit(par(usr))
+	par(usr = c(0, 1, 0, 1))
+	r = (cor(x, y,use="pairwise"))
+	txt <- format(c(r, 0.123456789), digits=digits)[1]
+	txt <- paste(prefix, txt, sep="")
+	if(missing(cex.cor)) cex <- 0.5/strwidth(txt)
+	text(0.5, 0.5, txt, cex = 2 * abs(r))
+}
+
+
+panel.hist <- function(x, ...)
+{
+	usr <- par("usr"); on.exit(par(usr))
+	par(usr = c(usr[1:2], 0, 1.5) )
+	h <- hist(x, plot = FALSE)
+	breaks <- h$breaks; nB <- length(breaks)
+	y <- h$counts; y <- y/max(y)
+	rect(breaks[-nB], 0, breaks[-1], y, col="#009E73", ...)
+}
+
+
+scatterPlotMatrix <- function (x,y,smooth=TRUE,scale=FALSE)
+{if (smooth ){
+if (scale) {
+	pairs(x,diag.panel=panel.hist,upper.panel=panel.cor.scale,lower.panel=panel.smooth)
+}
+else {pairs(x,diag.panel=panel.hist,upper.panel=panel.cor,lower.panel=panel.smooth)
+} 
+}
+else
+{ if (scale) {pairs(x,diag.panel=panel.hist,upper.panel=panel.cor.scale)
+} else {pairs(x,diag.panel=panel.hist,upper.panel=panel.cor) }
+}
+}
+
+scatterPlotMatrix(mtcars)
+```   
+
+Plot 1: Scatterplot matrix with correlation and frequency plot.
+
+```{r boxplot, echo=FALSE, fig.width=11, fig.height=5}
+library(ggplot2)
+p <- ggplot(mtcars, aes(am, mpg))
+p + geom_boxplot(aes(fill=am))
+```
+
+Plot 2: Boxplot of <code>miles per gallon</code> grouped by <code>transmission</code>.
+
+```{r, echo=FALSE, fig.width=10, fig.height=7}
+par(mfrow = c(2,2))
+plot(mod3)
+```
+
+Plot 3: Residual plot for the best model <code>mod3</code>
