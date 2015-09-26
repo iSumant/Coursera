@@ -5,7 +5,6 @@ output: html_document
 title: "Coursera: Regression Models - Project"
 subtitle: "Motor Trend Car Road Tests"
 author: "Sumant Sharma"
-
 ---  
 
 ***
