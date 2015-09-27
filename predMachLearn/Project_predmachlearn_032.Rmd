@@ -1,0 +1,167 @@
+
+---
+output: html_document
+---
+---
+title: "Coursera: Practical Machine Learning - Project"
+subtitle: "Human Activity Recognition"
+author: "Sumant Sharma"
+---  
+
+***
+### Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self-movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+***
+### Objective
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+***
+### Solution   
+#### 1. Loading Data
+```{r, results='hide'}
+#Loading required libraries.
+library(lattice)
+library(ggplot2)
+library(caret)
+library(randomForest)
+library(doSNOW)
+
+#Setting seed to 2015.
+set.seed(2015)
+
+#Loading the datasets and replacing all missing with "NA".
+training <- read.csv("C:\\Users\\Sumant\\Documents\\GitHub\\Coursera\\predMachLearn\\pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing <- read.csv("C:\\Users\\Sumant\\Documents\\GitHub\\Coursera\\predMachLearn\\pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+
+``` 
+
+#### 2. Data Preprocessing
+```{r, results='hide'}
+#Removing zero-variance predictors
+nzv<-nearZeroVar(training)
+training<-training[, -nzv]
+
+#Removing irrelevant columns(user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp)
+training<-training[,6:ncol(training)]
+
+#Removing columns having over 90% NAs
+totalNAs<-apply(training, 2, function(x){ sum(is.na(x)) });
+training<-training[,which(totalNAs < nrow(training)*0.9)];
+
+#Convert classe into factor
+training$classe<-as.factor(training$classe)
+
+``` 
+
+#### 3. Splitting Data into tesrting and validation
+```{r, results='hide'}
+#Partition the training data at 66%-33% for cross-validation.
+inTrain <- createDataPartition(y=training$classe, p=0.66, list=FALSE)
+training<-training[inTrain,]
+validation<-training[-inTrain,]
+
+``` 
+
+```{r, echo=TRUE}
+dim(training)
+dim(validation)
+dim(testing)
+``` 
+
+#### 4. Fitting models
+```{r, results='hide'}
+# Parallel programming
+cluster<-makeCluster(2)
+registerDoSNOW(cluster)
+
+# Built two models - 1.Classification Trees ("rpart") 2.Random Forest ("rf") 
+mod_rpart<-train(training$classe ~ ., method="rpart", data=training) 
+
+#mod_rf<-train(training$classe ~ ., method="rf", data=training, prox=TRUE, trControl = trainControl(method = "cv", number = 10, allowParallel = TRUE))
+mod_rf<-randomForest(training$classe ~ ., data=training, importance=TRUE, ntree=2000)
+
+
+# Persist and execute the models one by one if the system has low memory
+#save(mod_rpart, file="mod_rpart.rda")
+#save(mod_rf, file="mod_rf.rda")
+
+#Closing clusters
+stopCluster(cluster) 
+
+``` 
+
+#### 5. Predicting with models calculated
+```{r, results='hide'}
+# Loading the saved models
+#load("mod_rpart.rda")
+#load("mod_rf.rda")
+
+#Predict target variable 'classes' on validation dataset
+pred_rpart<-predict(mod_rpart, newdata=validation)
+pred_rf<-predict(mod_rf, newdata=validation)
+
+``` 
+
+#### 6. Comparing accuracies of models
+```{r, results='hide'}
+# Confusion Matrix (training set)
+acc_train_rpart<-confusionMatrix(predict(mod_rpart, training), training$classe)
+acc_train_rf<-confusionMatrix(predict(mod_rf, training), training$classe)
+
+# Confusion Matrix (validation set)
+acc_valid_rpart<-confusionMatrix(pred_rpart, validation$classe)
+acc_valid_rf<-confusionMatrix(pred_rf, validation$classe)
+
+``` 
+
+```{r}
+# In-sample error
+err_rpart<-acc_train_rpart$overall[1]*100
+err_rf<-acc_train_rf$overall[1]*100
+
+err_in_sample<-data.frame(100 - err_rpart, 100 - err_rf)
+colnames(err_in_sample)<-c("Classification Tree","Random Forest")
+rownames(err_in_sample)<-c("In-sample error")
+err_in_sample
+
+# Out-sample error
+acc_rpart<-acc_valid_rpart$overall[1]*100
+acc_rf<-acc_valid_rf$overall[1]*100
+
+err_out_sample<-data.frame(100 - acc_rpart, 100 - acc_rf)
+colnames(err_out_sample)<-c("Classification Tree", "Random Forest")
+rownames(err_out_sample)<-c("Out-of-sample error")
+err_out_sample
+
+# Final Accuracy
+accuracy<-data.frame(acc_rpart, acc_rf)
+colnames(accuracy)<-c("Classification Tree","Random Forest")
+accuracy
+``` 
+
+#### 7. Conclusion
+On comparing the accuracies of Classification Tree, Random Forest and Generalized Boosted models we find that Random forest model has the highest accuracy. We would use this model to predict how well an exercise activity was performed by the wearer of accelerometer on the test dataset.
+
+#### 8. Assignment submission
+```{r, eval=FALSE}
+# Following code is provided by Coursera
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+result <- predict(mod_rf, newdata=testing)
+result
+
+pml_write_files(result)
+``` 
+
+#### 9. Reference
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6.
+
+#### Note
+The accuracies of the final model are unrealistic (high overfit). Due to computational issues, the "rf" method of the caret package did not execute and hence had to use the randomForest directly.
